@@ -7,6 +7,7 @@ module Telekinesis
       def init(initialization_input); end
       def process_records(process_records_input); end
       def shutdown(shutdown_input); end
+      def shutdown_requested(checkpointer); end
     end
   end
 end

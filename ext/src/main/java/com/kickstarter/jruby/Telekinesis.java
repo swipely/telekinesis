@@ -6,6 +6,7 @@ import com.amazonaws.services.kinesis.clientlibrary.lib.worker.Worker;
 import com.amazonaws.services.kinesis.clientlibrary.types.InitializationInput;
 import com.amazonaws.services.kinesis.clientlibrary.types.ProcessRecordsInput;
 import com.amazonaws.services.kinesis.clientlibrary.types.ShutdownInput;
+import com.amazonaws.services.kinesis.clientlibrary.interfaces.IRecordProcessorCheckpointer;
 
 import java.util.concurrent.ExecutorService;
 
@@ -43,7 +44,7 @@ public class Telekinesis {
                                    final IRecordProcessorFactory factory) {
         com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory v2Factory = new com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessorFactory() {
             @Override
-            public com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor createProcessor() {
+            public RecordProcessorShim createProcessor() {
                 return new RecordProcessorShim(factory.createProcessor());
             }
         };
@@ -60,7 +61,9 @@ public class Telekinesis {
     /**
      * A shim that wraps a {@link IRecordProcessor} so it can get used by the KCL.
      */
-    private static class RecordProcessorShim implements com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor {
+    private static class RecordProcessorShim implements 
+            com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor,
+            com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IShutdownNotificationAware {
         private final IRecordProcessor underlying;
 
         public RecordProcessorShim(final IRecordProcessor underlying) { this.underlying = underlying; }
@@ -79,6 +82,12 @@ public class Telekinesis {
         public void shutdown(final ShutdownInput shutdownInput) {
             underlying.shutdown(shutdownInput);
         }
+
+        @Override
+        public void shutdownRequested(IRecordProcessorCheckpointer checkpointer){
+            underlying.shutdownRequested(checkpointer);
+        };
+
     }
 
     /**
@@ -100,6 +109,8 @@ public class Telekinesis {
          * @see com.amazonaws.services.kinesis.clientlibrary.interfaces.v2.IRecordProcessor#shutdown(ShutdownInput)
          */
         void shutdown(ShutdownInput shutdownInput);
+
+        void shutdownRequested(IRecordProcessorCheckpointer checkpointer);
     }
 
     /**
